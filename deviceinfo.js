@@ -180,7 +180,7 @@ export default {
     return RNDeviceInfo.deviceName;
   },
   getUserAgent: function() {
-    return RNDeviceInfo.userAgent;
+    return RNDeviceInfo.getUserAgent();
   },
   getDeviceLocale: function() {
     return RNDeviceInfo.deviceLocale;

@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #import "RNDeviceInfo.h"
 #import "DeviceUID.h"
+#import <WebKit/WebKit.h>
 #if !(TARGET_OS_TV)
 #import <LocalAuthentication/LocalAuthentication.h>
 #endif
@@ -23,6 +24,9 @@
 #endif
 
 @implementation RNDeviceInfo
+{
+    WKWebView *_webView;
+}
 
 @synthesize isEmulator;
 
@@ -30,9 +34,8 @@ RCT_EXPORT_MODULE(RNDeviceInfo)
 
 + (BOOL)requiresMainQueueSetup
 {
-   return YES;
+   return NO;
 }
-
 
 - (NSString*) deviceId
 {
@@ -175,16 +178,6 @@ RCT_EXPORT_MODULE(RNDeviceInfo)
 #endif
 }
 
-- (NSString*) userAgent
-{
-#if TARGET_OS_TV
-    return @"not available";
-#else
-    UIWebView* webView = [[UIWebView alloc] initWithFrame:CGRectZero];
-    return [webView stringByEvaluatingJavaScriptFromString:@"navigator.userAgent"];
-#endif
-}
-
 - (NSString*) deviceLocale
 {
     NSString *language = [[NSLocale preferredLanguages] objectAtIndex:0];
@@ -289,7 +282,6 @@ RCT_EXPORT_MODULE(RNDeviceInfo)
              @"buildNumber": [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] ?: [NSNull null],
              @"systemManufacturer": @"Apple",
              @"carrier": self.carrier ?: [NSNull null],
-             @"userAgent": self.userAgent ?: [NSNull null],
              @"timezone": self.timezone ?: [NSNull null],
              @"isEmulator": @(self.isEmulator),
              @"isTablet": @(self.isTablet),
@@ -356,6 +348,24 @@ RCT_EXPORT_METHOD(getBatteryLevel:(RCTPromiseResolveBlock)resolve rejecter:(RCTP
     float batteryLevel = [UIDevice currentDevice].batteryLevel;
   #endif
     resolve(@(batteryLevel));
+}
+
+RCT_EXPORT_METHOD(getUserAgent:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (_webView == nil) {
+            _webView = [[WKWebView alloc] initWithFrame:CGRectZero];
+        }
+        [_webView evaluateJavaScript:@"navigator.userAgent" completionHandler:^(id result, NSError * error) {
+            if (error == nil) {
+                if (result != nil) {
+                    resolve([NSString stringWithFormat:@"%@", result]);
+                }
+            } else {
+                reject(@"evaluate_js_failed", [NSString stringWithFormat:@"evaluateJavaScript error : %@", error.localizedDescription], error);
+            }
+        }];
+    });
 }
 
 @end
